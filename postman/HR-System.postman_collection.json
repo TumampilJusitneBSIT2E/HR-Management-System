@@ -1,0 +1,315 @@
+{
+  "info": {
+    "_postman_id": "2d1f6b61-46d4-4d67-a0d4-004fed9dd819",
+    "name": "HR Management System API",
+    "description": "Authentication and Employee CRUD demonstration for the ITEC 116 final project. Set the collection variables before running. For accounts requiring a first-login password change, run the Change Password request after Login.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "frontendOrigin", "value": "http://localhost:5173" },
+    { "key": "hrEmail", "value": "liza.ramos@company.ph" },
+    { "key": "hrPassword", "value": "" },
+    { "key": "newPassword", "value": "" },
+    { "key": "accessToken", "value": "" },
+    { "key": "employeeId", "value": "" },
+    { "key": "employeeEmail", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/hr/health",
+        "auth": { "type": "noauth" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('API health check succeeds', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login (JWT)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Origin", "value": "{{frontendOrigin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{hrEmail}}\",\n  \"password\": \"{{hrPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login returns a JWT and user', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.user.Email.toLowerCase()).to.eql(pm.collectionVariables.get('hrEmail').toLowerCase());",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change Password (first login only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Origin", "value": "{{frontendOrigin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{hrPassword}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/auth/change-password"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Password change returns a replacement JWT', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.user.MustChangePassword).to.eql(false);",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('hrPassword', pm.collectionVariables.get('newPassword'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current Profile (Bearer JWT)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bearer token accesses profile', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Authentication checks",
+      "item": [
+        {
+          "name": "Protected route without token (expect 401)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/hr/employees"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Protected route rejects missing token', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Employee CRUD (HR Manager)",
+      "item": [
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Origin", "value": "{{frontendOrigin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"DepartmentID\": 2,\n  \"FirstName\": \"Demo\",\n  \"LastName\": \"Employee\",\n  \"Email\": \"hr.demo.{{$timestamp}}@example.test\",\n  \"Role\": \"Employee\",\n  \"Position\": \"Demo Analyst\",\n  \"InitialPassword\": \"DemoUser123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/hr/employees"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Employee is created without password fields', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.EmployeeID).to.be.a('number');",
+                  "  pm.expect(body).not.to.have.property('PasswordHash');",
+                  "  pm.expect(body).not.to.have.property('passwordHash');",
+                  "  pm.collectionVariables.set('employeeId', body.EmployeeID);",
+                  "  pm.collectionVariables.set('employeeEmail', body.Email);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read Employee",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/hr/employees/{{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Employee is readable', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().EmployeeID).to.eql(Number(pm.collectionVariables.get('employeeId')));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Origin", "value": "{{frontendOrigin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Position\": \"Updated Demo Analyst\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/hr/employees/{{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Employee is updated', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().Position).to.eql('Updated Demo Analyst');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Employee (deactivate)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Origin", "value": "{{frontendOrigin}}" }
+            ],
+            "url": "{{baseUrl}}/hr/employees/{{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Employee is safely deactivated', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Leave Request CRUD",
+      "description": "Use a signed-in Employee account that has a balance and is allowed to create leave requests. Only pending requests owned by that employee can be updated or deleted.",
+      "item": [
+        {
+          "name": "List My Leave Requests",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/hr/leave-requests"
+          }
+        },
+        {
+          "name": "Create Leave Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Origin", "value": "{{frontendOrigin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"LeaveTypeID\": 1,\n  \"StartDate\": \"2026-12-01\",\n  \"EndDate\": \"2026-12-02\",\n  \"Reason\": \"Postman demonstration\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/hr/leave-requests"
+          }
+        }
+      ]
+    }
+  ]
+}
