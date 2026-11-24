@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HR Management System — Technical Documentation</title>
+  <style>
+    @page { size: A4; margin: 18mm 17mm; }
+    body { color: #172033; font: 10.5pt/1.5 Arial, sans-serif; max-width: 190mm; margin: 0 auto; }
+    h1 { color: #14365d; font-size: 24pt; line-height: 1.2; margin-top: 0; }
+    h2 { color: #14365d; font-size: 16pt; margin-top: 24pt; page-break-after: avoid; }
+    h3 { color: #24527a; font-size: 12pt; page-break-after: avoid; }
+    p, li { orphans: 3; widows: 3; }
+    table { border-collapse: collapse; width: 100%; margin: 10pt 0 16pt; font-size: 9pt; }
+    th { background: #e8f0f8; text-align: left; }
+    th, td { border: 1px solid #9aabba; padding: 5pt; vertical-align: top; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f3f6f9; padding: 8pt; font: 8.5pt/1.35 Consolas, monospace; }
+    code { font: 9pt Consolas, monospace; background: #f3f6f9; }
+    blockquote { border-left: 3px solid #4b83ad; margin: 10pt 0; padding: 4pt 12pt; }
+    a { color: #205b88; text-decoration: none; }
+    img { max-width: 100%; }
+  </style>
+</head>
+<body>
+<h1>HR Management System</h1>
+<h2>Cover Page</h2>
+<p><strong>Course:</strong> ITEC 116 — IT Elective 4 (Systems Integration and Architecture 2)<br><strong>Project type:</strong> Individual final project<br><strong>Student:</strong> Justine Tumampil<br><strong>GitHub repository:</strong> Add the submitted repository URL before exporting this document<br><strong>Video walkthrough:</strong> Add the shareable 5–10 minute video URL before exporting this document<br><strong>Presentation date:</strong> November 28, 2026</p>
+<h2>Table of Contents</h2>
+<ol>
+<li>Project Overview</li>
+<li>System Analysis</li>
+<li>System Architecture</li>
+<li>Database Design</li>
+<li>REST API Design</li>
+<li>Authentication and Security</li>
+<li>Backend Implementation</li>
+<li>API Testing and Validation</li>
+<li>Conclusion</li>
+<li>References</li>
+<li>Appendix</li>
+</ol>
+<h2>1. Project Overview</h2>
+<p>The HR Management System is a full-stack prototype for employee onboarding and leave administration. It supports employees, department heads, and HR managers through role-specific access.</p>
+<h3>Objectives</h3>
+<ul>
+<li>Store HR data in a relational MySQL database.</li>
+<li>Provide REST endpoints for HR resources.</li>
+<li>Authenticate users with JWT and restrict protected routes.</li>
+<li>Support employee management, leave requests and approvals, and onboarding documents.</li>
+<li>Validate API input and record security-sensitive actions.</li>
+</ul>
+<h3>Users and major features</h3>
+<table>
+<thead>
+<tr>
+<th>User</th>
+<th>Main tasks</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Employee</td>
+<td>View leave balances, submit and track leave, manage documents, change password</td>
+</tr>
+<tr>
+<td>Department Head</td>
+<td>Review assigned department leave requests and make approval decisions</td>
+</tr>
+<tr>
+<td>HR Manager</td>
+<td>Manage employees, review documents, and complete assigned approvals</td>
+</tr>
+</tbody></table>
+<h2>2. System Analysis</h2>
+<h3>Problem</h3>
+<p>Manual HR processes make it difficult to track leave balances, prevent overlapping requests, assign approvals, and verify onboarding documents consistently.</p>
+<h3>Scope</h3>
+<p>The prototype manages employees and departments, leave types and balances, leave requests and approval records, onboarding documents, and audit events. It uses weekday-based leave duration; public holidays are not excluded.</p>
+<h3>Functional requirements</h3>
+<ul>
+<li>Authenticate users and protect HR routes.</li>
+<li>Enforce role and ownership checks.</li>
+<li>Create, read, update, and safely deactivate employee records.</li>
+<li>Create, read, update, and delete pending leave requests.</li>
+<li>Validate leave balances, supporting documents, and overlapping dates.</li>
+<li>Record multi-step approval decisions.</li>
+<li>Upload and verify onboarding documents.</li>
+</ul>
+<h2>3. System Architecture</h2>
+<pre><code class="language-text">React browser / Postman
+          |
+          | HTTP + JWT (Bearer token for API clients;
+          | HttpOnly cookie for the browser session)
+          v
+NestJS guards -&gt; DTO validation -&gt; Controller
+                                  |
+                                  v
+                              Service
+                                  |
+                                  v
+                         TypeORM Repository
+                         Entity / relations
+                                  |
+                                  v
+                               MySQL
+</code></pre>
+<p>Employee and leave-request CRUD, authentication, and HR resource access use TypeORM entities and repositories. Database initialization and a few aggregate/reservation queries use parameterized SQL through TypeORM&#39;s <code>DataSource</code>. Uploaded document bytes are stored in the private upload directory; the database stores metadata and a storage key.</p>
+<h2>4. Database Design</h2>
+<h3>ERD relationships</h3>
+<pre><code class="language-mermaid">erDiagram
+  DEPARTMENTS ||--o{ EMPLOYEES : contains
+  EMPLOYEES ||--o{ LEAVE_BALANCES : receives
+  LEAVE_TYPES ||--o{ LEAVE_BALANCES : defines
+  EMPLOYEES ||--o{ LEAVE_REQUESTS : submits
+  LEAVE_TYPES ||--o{ LEAVE_REQUESTS : classifies
+  LEAVE_REQUESTS ||--o{ LEAVE_APPROVALS : requires
+  EMPLOYEES ||--o{ LEAVE_APPROVALS : approves
+  EMPLOYEES ||--o{ ONBOARDING_DOCUMENTS : uploads
+  EMPLOYEES ||--o{ AUDIT_LOGS : acts
+</code></pre>
+<h3>Main entities</h3>
+<table>
+<thead>
+<tr>
+<th>Entity/table</th>
+<th>Purpose</th>
+<th>Important keys/relationships</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Department</td>
+<td>Department directory and assigned head</td>
+<td><code>department_id</code> PK; employee collection</td>
+</tr>
+<tr>
+<td>Employee</td>
+<td>User identity, role, and employment status</td>
+<td><code>employee_id</code> PK; unique email; department FK</td>
+</tr>
+<tr>
+<td>LeaveType</td>
+<td>Leave categories and policy defaults</td>
+<td><code>leave_type_id</code> PK</td>
+</tr>
+<tr>
+<td>LeaveBalance</td>
+<td>Annual entitlement and used days</td>
+<td>Employee and leave-type FKs; unique employee/type/year</td>
+</tr>
+<tr>
+<td>LeaveRequest</td>
+<td>Employee leave application</td>
+<td>Employee and leave-type FKs</td>
+</tr>
+<tr>
+<td>LeaveApproval</td>
+<td>Ordered approval decisions</td>
+<td>Request and approver FKs; unique request/level</td>
+</tr>
+<tr>
+<td>OnboardingDocument</td>
+<td>Document metadata and verification</td>
+<td>Employee and verifier FKs</td>
+</tr>
+<tr>
+<td>AuditLog</td>
+<td>Security and HR action history</td>
+<td>Optional actor FK</td>
+</tr>
+</tbody></table>
+<p>The TypeORM mappings are in <code>backend/src/database/entities.ts</code>. The reproducible DDL is in <code>docs/hr_system.sql</code>; backend startup creates missing tables and inserts demonstration records.</p>
+<h2>5. REST API Design</h2>
+<p>Base URL: <code>http://localhost:3001</code>. Protected endpoints accept an <code>Authorization: Bearer &lt;JWT&gt;</code> header or the browser&#39;s HttpOnly session cookie. State-changing requests from Postman must include an allowed <code>Origin</code> header, normally <code>http://localhost:5173</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Access</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET</td>
+<td><code>/</code></td>
+<td>Public</td>
+<td>API greeting</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/health</code></td>
+<td>Public</td>
+<td>Health status</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/auth/login</code></td>
+<td>Public</td>
+<td>Authenticate; returns JWT and sets session cookie</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/auth/me</code></td>
+<td>Signed in</td>
+<td>Read current profile</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/auth/change-password</code></td>
+<td>Signed in</td>
+<td>Change password and rotate JWT</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/auth/logout</code></td>
+<td>Public</td>
+<td>Clear browser session cookie</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/employees</code></td>
+<td>HR Manager</td>
+<td>List employees</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/employees/:employeeId</code></td>
+<td>HR Manager</td>
+<td>Read employee</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/hr/employees</code></td>
+<td>HR Manager</td>
+<td>Create employee and initial balances</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/hr/employees/:employeeId</code></td>
+<td>HR Manager</td>
+<td>Update employee fields</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/hr/employees/:employeeId</code></td>
+<td>HR Manager</td>
+<td>Deactivate employee while retaining HR history</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/hr/employees/:employeeId/deactivate</code></td>
+<td>HR Manager</td>
+<td>Legacy deactivate action</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/hr/employees/:employeeId/password-reset</code></td>
+<td>HR Manager</td>
+<td>Issue a temporary password</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/departments</code></td>
+<td>Signed in</td>
+<td>List departments</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/leave-types</code></td>
+<td>Signed in</td>
+<td>List leave types</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/leave-balances</code></td>
+<td>Signed in; HR sees all</td>
+<td>Read annual balances and pending reservations</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/leave-requests</code></td>
+<td>Signed in</td>
+<td>List requests within the user&#39;s access scope</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/leave-requests/:requestId</code></td>
+<td>Signed in</td>
+<td>Read an accessible request</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/hr/leave-requests</code></td>
+<td>Signed in</td>
+<td>Submit a leave request</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/hr/leave-requests/:requestId</code></td>
+<td>Owner</td>
+<td>Update a pending request</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/hr/leave-requests/:requestId</code></td>
+<td>Owner</td>
+<td>Delete a pending request and its pending approval records</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/approvals</code></td>
+<td>Signed in</td>
+<td>List approvals assigned to or submitted by the user</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/hr/approvals/:approvalId</code></td>
+<td>Department Head / HR Manager</td>
+<td>Approve or reject an assigned approval</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/documents</code></td>
+<td>Signed in</td>
+<td>List documents in the user&#39;s access scope</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/hr/documents</code></td>
+<td>Signed in</td>
+<td>Upload a PDF, JPEG, or PNG</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/hr/documents/:documentId/download</code></td>
+<td>Owner / authorized reviewer / HR</td>
+<td>Download a private upload</td>
+</tr>
+<tr>
+<td>PATCH</td>
+<td><code>/hr/documents/:documentId/verification</code></td>
+<td>HR Manager</td>
+<td>Verify or reject a pending document</td>
+</tr>
+</tbody></table>
+<p>The employee and leave-request resources have full CRUD operations. <code>DELETE</code> on an employee intentionally deactivates the account rather than erasing records referenced by HR history. Leave-request deletion is limited to the submitting employee and pending requests.</p>
+<h3>Example request and response</h3>
+<p><strong>Create employee</strong></p>
+<pre><code class="language-http">POST /hr/employees
+Authorization: Bearer &lt;JWT&gt;
+Origin: http://localhost:5173
+Content-Type: application/json
+</code></pre>
+<pre><code class="language-json">{
+  &quot;DepartmentID&quot;: 2,
+  &quot;FirstName&quot;: &quot;Demo&quot;,
+  &quot;LastName&quot;: &quot;Employee&quot;,
+  &quot;Email&quot;: &quot;demo.employee@example.test&quot;,
+  &quot;Role&quot;: &quot;Employee&quot;,
+  &quot;Position&quot;: &quot;Analyst&quot;,
+  &quot;InitialPassword&quot;: &quot;&lt;INITIAL_PASSWORD&gt;&quot;
+}
+</code></pre>
+<p>Successful creation returns <code>201 Created</code> with the employee&#39;s public fields; it never returns the password hash. Validation errors return <code>400</code>; unauthenticated requests return <code>401</code>; role failures return <code>403</code>; missing records return <code>404</code>; conflicting operations return <code>409</code>.</p>
+<h2>6. Authentication and Security</h2>
+<ul>
+<li>Passwords are hashed with bcrypt; the database stores hashes, not plaintext passwords.</li>
+<li>Initial demonstration-account passwords are supplied through private environment variables, never hard-coded or committed.</li>
+<li>Login issues a short-lived signed JWT. It is returned in the JSON response for API clients and also set as an HttpOnly, SameSite cookie for the React client.</li>
+<li>JWT authentication accepts the session cookie or a Bearer token and checks the employee status and token version.</li>
+<li>Global guards enforce authentication, role metadata, and allowed origins for state-changing requests.</li>
+<li>DTO validation rejects invalid fields and unknown properties.</li>
+<li>Login attempts are rate-limited in process memory.</li>
+<li>Password changes and resets rotate the token version and require a change after reset.</li>
+<li>Uploaded files are restricted by file signature, type, and size; downloads require authorization.</li>
+<li>Security-related changes are written to the audit log.</li>
+</ul>
+<p>This is a coursework prototype, not a production security certification. A production deployment would also require HTTPS, durable rate-limiting, secrets management, database backups, and a reviewed migration/deployment process.</p>
+<h2>7. Backend Implementation</h2>
+<p>The backend uses NestJS modules, controllers, services, DTOs, guards, TypeORM entities, and repositories. The main TypeORM entity mappings are in <code>backend/src/database/entities.ts</code>; the HR API is in <code>backend/src/hr/hr.controller.ts</code> and <code>backend/src/hr/hr.service.ts</code>; authentication is in <code>backend/src/auth</code>.</p>
+<p>The HR application supports employee management, leave balances and approvals, and private onboarding document workflows. The React frontend is an optional presentation layer; the API can be demonstrated independently with Postman.</p>
+<h2>8. API Testing and Validation</h2>
+<p>Import <code>postman/HR-System.postman_collection.json</code> into Postman. Set <code>hrPassword</code>; if the seeded account requires a first-login change, set <code>newPassword</code> and run the change-password request. The collection includes:</p>
+<ul>
+<li>API health check.</li>
+<li>Login and JWT capture.</li>
+<li>Current-profile request using a Bearer token.</li>
+<li>Missing-token check expecting <code>401</code>.</li>
+<li>Employee Create, Read, Update, and Delete/deactivate sequence.</li>
+<li>Leave-request examples for an Employee account.</li>
+</ul>
+<p>The current local validation record:</p>
+<ul>
+<li>Backend TypeScript/Nest build: passed.</li>
+<li>Frontend production build: passed.</li>
+<li>XAMPP/MySQL connection and API health route: verified after startup.</li>
+<li>Protected employees route without a token: returned <code>401</code>.</li>
+<li>Capture and insert representative Postman screenshots here before final PDF export.</li>
+</ul>
+<h2>9. Conclusion</h2>
+<p>The prototype integrates a MySQL-backed HR workflow, REST APIs, JWT authentication, role-based access, validation, and a React client. The design prioritizes leave policy checks, controlled approval, and protected employee documents. Future work includes broader automated endpoint tests, a formal migration strategy, and public-holiday-aware leave calculation.</p>
+<h2>10. References</h2>
+<ul>
+<li>ITEC 116 Final Project Student Guide, provided in the course materials.</li>
+<li>NestJS documentation: <a href="https://docs.nestjs.com/">https://docs.nestjs.com/</a></li>
+<li>TypeORM documentation: <a href="https://typeorm.io/">https://typeorm.io/</a></li>
+<li>MySQL documentation: <a href="https://dev.mysql.com/doc/">https://dev.mysql.com/doc/</a></li>
+<li>Postman Learning Center: <a href="https://learning.postman.com/">https://learning.postman.com/</a></li>
+</ul>
+<h2>11. Submission items still to complete</h2>
+<p>This local PDF is a documentation draft. Complete these items and export it again before submitting:</p>
+<ol>
+<li>Replace the GitHub and video placeholders on the cover.</li>
+<li>Add screenshots of successful Postman tests and a phpMyAdmin record that matches the request.</li>
+<li>Confirm the ERD and endpoint examples match the final implementation.</li>
+<li>Export this document to PDF and open the exported file once to verify it.</li>
+</ol>
+
+</body>
+</html>
