@@ -5,7 +5,7 @@
 **Course:** ITEC 116 — IT Elective 4 (Systems Integration and Architecture 2)  
 **Project type:** Individual final project  
 **Student:** Justine Tumampil  
-**GitHub repository:** Add the submitted repository URL before exporting this document  
+**GitHub repository:** [HR-Management-System](https://github.com/TumampilJusitneBSIT2E/HR-Management-System)  
 **Video walkthrough:** Add the shareable 5–10 minute video URL before exporting this document  
 **Presentation date:** November 28, 2026
 
@@ -235,7 +235,7 @@ The prototype integrates a MySQL-backed HR workflow, REST APIs, JWT authenticati
 
 This local PDF is a documentation draft. Complete these items and export it again before submitting:
 
-1. Replace the GitHub and video placeholders on the cover.
+1. Add the shareable video URL on the cover and make sure the course reviewer can access the private GitHub repository.
 2. Add screenshots of successful Postman tests and a phpMyAdmin record that matches the request.
 3. Confirm the ERD and endpoint examples match the final implementation.
 4. Export this document to PDF and open the exported file once to verify it.

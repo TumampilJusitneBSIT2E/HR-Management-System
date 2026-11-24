@@ -58,12 +58,13 @@ The backend maps all HR tables with TypeORM entities. The Employee and Leave Req
 
 ## Coursework deliverables
 
-- Technical-documentation source: [`docs/Technical-Documentation.md`](./docs/Technical-Documentation.md). Add the GitHub/video links and Postman/phpMyAdmin screenshots, then export it as the required PDF.
+- Technical-documentation source: [`docs/Technical-Documentation.md`](./docs/Technical-Documentation.md). Add the video link and Postman/phpMyAdmin screenshots, then export the final PDF.
+- GitHub repository: https://github.com/TumampilJusitneBSIT2E/HR-Management-System (private; grant the course reviewer access if needed).
 - Postman collection: [`postman/HR-System.postman_collection.json`](./postman/HR-System.postman_collection.json). Set the HR password variable before use; state-changing calls include the configured Origin.
 - Presentation plan: [`docs/Presentation-Outline.md`](./docs/Presentation-Outline.md).
 - Database schema: [`docs/hr_system.sql`](./docs/hr_system.sql). Demo rows are seeded by backend startup.
 
-The documentation PDF draft is available at `docs/Technical-Documentation.pdf`; add the final screenshots and GitHub/video links before submitting it. The GitHub repository URL, live database export, and narrated video still need to be completed. This workspace does not publish to GitHub or upload files on your behalf.
+The documentation PDF draft is available at `docs/Technical-Documentation.pdf`; add the final screenshots and video link before submitting it. The live database export and narrated video still need to be completed.
 
 ## Authentication and demo accounts
 
