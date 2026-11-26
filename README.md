@@ -62,6 +62,7 @@ The backend maps all HR tables with TypeORM entities. The Employee and Leave Req
 - GitHub repository: https://github.com/TumampilJusitneBSIT2E/HR-Management-System (private; grant the course reviewer access if needed).
 - Postman collection: [`postman/HR-System.postman_collection.json`](./postman/HR-System.postman_collection.json). Set the HR password variable before use; state-changing calls include the configured Origin.
 - Presentation plan: [`docs/Presentation-Outline.md`](./docs/Presentation-Outline.md).
+- Narrated video script: [`docs/Video-Demo-Script.md`](./docs/Video-Demo-Script.md).
 - Database schema: [`docs/hr_system.sql`](./docs/hr_system.sql). Demo rows are seeded by backend startup.
 
 The documentation PDF draft is available at `docs/Technical-Documentation.pdf`; add the final screenshots and video link before submitting it. The live database export and narrated video still need to be completed.
