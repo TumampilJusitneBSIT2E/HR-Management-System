@@ -1,99 +1,173 @@
-# HR System Video Demo Script
+# HR System Video Demo: Click-by-Click Guide
 
-Target runtime: about 7 minutes 30 seconds. This is a narrated system walkthrough, not a claim that every API route was tested.
+Target runtime: about 7 minutes 30 seconds. This is a narrated walkthrough of the tested API flows and an explanation of the other implemented HR workflows. Do not imply that an untested request succeeded.
 
-## Before recording
+## What this video demonstrates
 
-- Start XAMPP MySQL, then start the backend from `backend/` with `npm.cmd run start:dev`.
-- Check `http://localhost:3001/hr/health` in Postman and make sure it returns `200 OK`.
-- Keep the backend terminal open. The React site is optional for this API-focused demo.
-- Arrange VS Code and Postman so the request name, status code, and relevant response are readable.
-- Use a throwaway employee record for the recording. The employee Delete endpoint deactivates the record; it does not erase HR history.
-- Do not show passwords, JWTs, `.env` values, or real employee details. The Create Employee request body contains an initial password; hide or crop that part of the screen while recording. Do not expose the login response body, which contains a token.
-- If repeating CRUD after a practice run, run Create again to get a new employee ID, then use that same ID for Read, Update, and Deactivate.
-- The missing-token check must have no `hr_session` cookie. Clear the cookie for `localhost` immediately before this check; do not send Login again before the check.
+- API availability through `GET /hr/health`.
+- JWT login and profile access.
+- Rejection of an unauthenticated request with `401`.
+- Full Employee CRUD: Create, Read, Update, and Delete (which safely deactivates).
+- The implemented leave and onboarding workflows, with a successful leave response only if one is actually obtained.
+- A brief trace from the controller to the service and TypeORM entity.
 
-## Recording script
+The backend has 27 route handlers. This short video intentionally demonstrates representative requests and a complete CRUD workflow rather than all 27 routes.
 
-### 0:00–0:40 — Introduction
+## Prepare before recording
 
-**Show:** Project title in the README or this script, then the VS Code Explorer with the `backend`, `frontend`, `docs`, and `postman` folders.
+### Start the system
 
-**Say:**
+1. Open XAMPP Control Panel and click **Start** beside **MySQL**. Start **Apache** only if you plan to show phpMyAdmin.
+2. In VS Code, choose **Terminal → New Terminal**.
+3. In the terminal, run:
+
+   ```powershell
+   cd D:\xampp\htdocs\HR\backend
+   npm.cmd run start:dev
+   ```
+
+4. Wait for Nest to report that it started successfully. Leave this terminal running.
+5. In Postman, open the imported **HR Management System API** collection, select **Health**, and click **Send**. Confirm `200 OK` and `{"status":"ok"}` before recording.
+
+The React frontend is optional for this API-focused video. If you also want to show the browser UI, open a second VS Code terminal and run:
+
+```powershell
+cd D:\xampp\htdocs\HR\frontend
+npm.cmd run dev -- --host 0.0.0.0
+```
+
+### Prepare Postman safely
+
+1. Expand **HR Management System API** in the left **Collections** panel.
+2. Confirm the collection variables are already set and the login works. Keep the actual `hrPassword`, `newPassword`, and `accessToken` private. Do not show the collection **Variables** tab on camera.
+3. Confirm **Current Profile (Bearer JWT)** succeeds with `200 OK`.
+4. In Postman's **Cookies** control, remove the `hr_session` cookie for `localhost` immediately before the no-auth request. This is necessary because login stores a cookie and the API accepts either a Bearer token or that cookie.
+5. Select **Authentication checks → Protected route without token (expect 401)** and send it. Confirm the response is `401 Unauthorized` and the test passes.
+6. Confirm **Employee CRUD (HR Manager)** requests still have the collection Bearer token and can run. The no-auth request explicitly disables collection authentication; employee requests inherit the collection Bearer token.
+7. For the recording, run a fresh **Create Employee** first so Postman sets a new `employeeId`, then use that same ID for Read, Update, and Deactivate. The collection generates a timestamped demo email.
+8. The Create Employee body includes a demo initial password. Arrange the Postman window so the request body and response secrets are outside the recorded area. Do not reveal login response tokens, password values, `.env`, or real employee data.
+
+If Login returns `401`, stop and verify the current account password privately; do not reset the existing database password just for this recording. If the no-auth request returns `200`, clear the `localhost` cookie and retry. Only narrate results actually shown.
+
+## Recording: exact screen actions and narration
+
+### 0:00–0:40 — Introduce the project
+
+**Click/show**
+
+1. In VS Code, open the Explorer if it is hidden.
+2. Show the project folders: `backend`, `frontend`, `docs`, and `postman`.
+3. Show the project title in the README or this script.
+
+**Say**
 
 > Hello. This is my Employee Onboarding and Leave Management System. It is a full-stack HR prototype for managing employee records and onboarding documents, as well as leave balances, leave requests, and approvals. I’ll demonstrate the running API and a complete employee CRUD workflow using Postman.
 
-### 0:40–1:25 — Architecture and code structure
+### 0:40–1:25 — Show the architecture in code
 
-**Show:** In VS Code, briefly show `frontend/src/App.jsx`, then `backend/src/hr/hr.controller.ts`, and `backend/src/database/entities.ts`. Do not scroll through the whole files; highlight the file names and a relevant method or entity.
+**Click/show**
 
-**Say:**
+1. In VS Code press **Ctrl+P**, type `frontend/src/App.jsx`, and press **Enter**. Briefly show the React app file name.
+2. Press **Ctrl+P**, type `backend/src/hr/hr.controller.ts`, and press **Enter**.
+3. Use **Ctrl+F**, search `createEmployee`, and show the controller method that routes the request to `hrService.createEmployee`.
+4. Press **Ctrl+P**, type `backend/src/database/entities.ts`, and press **Enter**. Use **Ctrl+F** to show `EmployeeEntity` or `LeaveRequestEntity`.
+5. Do not spend time scrolling through entire files.
 
-> The React frontend provides the browser interface, while Postman can call the API directly. The backend is built with NestJS. A request reaches a controller, which calls the HR service. TypeORM repositories connect the business operations to MySQL. The entity file maps the HR tables and their relationships, including employees, departments, leave requests, and approvals.
+**Say**
 
-### 1:25–1:55 — API health
+> The React frontend provides the browser interface, while Postman can call the API directly. The backend is built with NestJS. A request reaches a controller, which calls the HR service. TypeORM repositories connect business operations to MySQL. The entity file maps tables and relationships, including employees, departments, leave requests, and approvals.
 
-**Show:** In Postman, select **Health**, click **Send**, and show the `200 OK` status and `{ "status": "ok" }` response.
+### 1:25–1:55 — Show API availability
 
-**Say:**
+**Click/show**
+
+1. Switch to Postman.
+2. In the left collection tree, click **Health**.
+3. Click the blue **Send** button at the upper-right of the request.
+4. Show the `200 OK` status and the small health response. Do not show unrelated data.
+
+**Say**
 
 > First I check the health endpoint. The 200 response confirms that the API is running and responding.
 
-### 1:55–3:05 — Authentication and access control
+### 1:55–3:05 — Show authentication and protection
 
-**Show:** Briefly show the request names **Login (JWT)** and **Current Profile (Bearer JWT)**. Keep the login body, response token, and any password fields hidden. Show the profile's `200 OK` status without exposing personal fields. Then show **Protected route without token (expect 401)** and its `401 Unauthorized` status.
+**Click/show**
 
-**Say:**
+1. In the left collection tree, expand **Authentication**.
+2. Briefly select **Login (JWT)**. Do not show its password variable, request body with credentials, or response token. Do not pause on the login response.
+3. Select **Current Profile (Bearer JWT)** and show only the request name and `200 OK` status. Hide or crop personal response fields.
+4. Expand **Authentication checks**.
+5. Select **Protected route without token (expect 401)**.
+6. Click **Send** and show `401 Unauthorized` plus the passing test result. Avoid showing employee data if the result is anything other than 401.
 
-> The API authenticates users and issues a JWT. In a browser session it also uses an HttpOnly session cookie. The profile request succeeds when authenticated. Here the protected employees route returns 401 when I remove the session cookie and send it without authentication. The route is protected, so it rejects the request.
+**Say**
 
-**If the no-token request returns 200:** stop and clear the `hr_session` cookie for `localhost`; Postman may be authenticating with that cookie. Run the request again and only describe the `401` after it appears.
+> Login authenticates the HR user and issues a JWT. In a browser session the API also uses an HttpOnly session cookie. The profile request succeeds when authenticated. Here the protected employees route returns 401 after the session cookie is removed, demonstrating that an unauthenticated request is rejected.
 
-### 3:05–5:20 — Employee CRUD
+If the result is `200`, do not call it a successful no-token check. Clear the cookie for `localhost`, send it again, and only continue when you get `401`.
 
-**Show:** Expand **Employee CRUD (HR Manager)**. Send each request in order, showing the status code and a safe part of the response:
+### 3:05–5:20 — Demonstrate Employee CRUD
 
-1. **Create Employee**
-2. **Read Employee**
-3. **Update Employee**
-4. **Delete Employee (deactivate)**
+**Click/show**
 
-Keep the Create request's initial-password field masked or cropped. Avoid showing real employee data.
+1. Expand **Employee CRUD (HR Manager)** in the left collection tree.
+2. Click **Create Employee**. Keep the request-body area containing `InitialPassword` out of the recording. Click **Send**. Show the success status and only safe demo fields. The request test automatically saves `employeeId`.
+3. Click **Read Employee**. Click **Send**. Show `200 OK` and that the ID matches the created demo employee.
+4. Click **Update Employee**. Click **Send**. Show `200 OK` and the position changed to `Updated Demo Analyst`.
+5. Click **Delete Employee (deactivate)**. Click **Send**. Show `200 OK` and the success result.
+6. Wait for each response before selecting the next request.
 
-**Say:**
+**Say**
 
-> I’m now demonstrating employee CRUD using a throwaway employee. Create adds the record and the collection saves its ID. Read retrieves that record. Update changes its position. Delete deactivates the employee rather than removing the row, preserving HR history. Together these requests demonstrate create, read, update, and delete behavior through the API.
+> I’m using a throwaway demo employee. Create adds the record and saves its ID for the next requests. Read retrieves that same employee. Update changes the position. Delete deactivates the employee rather than erasing the record, which preserves HR history. Together these requests demonstrate create, read, update, and delete behavior.
 
-Wait for each response before moving to the next request. If one fails, do not claim the sequence passed; explain the actual result.
+Use the collection's generated timestamp email so repeated practice runs do not reuse an existing email. Do not repeat Create unless you are ready to use the new ID for all remaining steps.
 
-### 5:20–6:20 — Leave management and onboarding
+### 5:20–6:20 — Explain leave and onboarding workflows
 
-**Show:** Expand **Leave Request CRUD** and send **List My Leave Requests** only if it returns a successful response for the signed-in user. If it does not, show the route names in the documentation or the leave request/approval entities in `backend/src/database/entities.ts`. Do not create a request with the HR Manager account.
+**Click/show**
 
-**Say:**
+1. Expand **Leave Request CRUD**.
+2. Select **List My Leave Requests**.
+3. Click **Send** only if the saved Bearer token is still active. Show the response only if it is successful and contains no sensitive information.
+4. If the response is empty or errors, switch to VS Code and open `backend/src/database/entities.ts` using **Ctrl+P**. Use **Ctrl+F** to show `LeaveRequestEntity`, `LeaveApprovalEntity`, or `OnboardingDocumentEntity`.
+5. Do not create a leave request while signed in as the HR Manager. The collection describes this request flow for an Employee account.
 
-> The leave workflow lets an employee submit and track a request. The system keeps leave balances and approval records, and authorized approvers make decisions on assigned requests. The onboarding workflow stores document metadata and supports private document uploads and HR verification. I’m describing these workflows here; I’m only claiming a successful leave test if the response shown on screen succeeded.
+**Say**
 
-### 6:20–7:05 — Brief code/data-flow trace
+> The leave workflow lets an employee submit and track a request. The system keeps annual balances and approval records, and authorized approvers make decisions on assigned requests. Onboarding documents can be uploaded privately and reviewed by HR. I’m describing those implemented workflows; I’m only claiming a successful leave test if the response shown here succeeded.
 
-**Show:** In VS Code, show `backend/src/hr/hr.controller.ts` at `createEmployee` and `backend/src/hr/hr.service.ts` at `createEmployee`. If time permits, point to the employee/department relationship in `backend/src/database/entities.ts`.
+### 6:20–7:05 — Trace the employee request
 
-**Say:**
+**Click/show**
 
-> This code trace shows how a request is handled: the controller receives and routes the request, the service applies the HR operation, and TypeORM persists the employee through the repository. The entity defines how the employee relates to the department and other HR records.
+1. In VS Code press **Ctrl+P**, open `backend/src/hr/hr.controller.ts`, and search for `createEmployee`.
+2. Point out that the controller passes the validated DTO and current HR user's ID to the service.
+3. Press **Ctrl+P**, open `backend/src/hr/hr.service.ts`, and search for `async createEmployee`.
+4. Point out the employee repository operation and transaction. Do not show environment files or secrets.
+5. If time permits, open `backend/src/database/entities.ts` and show how `EmployeeEntity` relates to a department.
 
-### 7:05–7:30 — Conclusion
+**Say**
 
-**Show:** Return to the project title or the Postman collection overview.
+> This code trace shows the path for creating an employee. The controller receives the request and identifies the signed-in user. The service checks and writes the employee using TypeORM repositories, and the entity maps the employee to the MySQL table and department relationship.
 
-**Say:**
+### 7:05–7:30 — Conclude
 
-> To summarize, the system combines employee and onboarding management with leave requests, balances, and approvals. The demo showed API availability, authentication, protected access, and employee CRUD. A future improvement is accounting for public holidays when calculating leave duration. Thank you.
+**Click/show**
 
-## If something goes wrong during the recording
+1. Return to the Postman collection overview or the project title in VS Code.
+2. Leave a clean, non-sensitive screen visible.
 
-- If Health fails, check the backend terminal and MySQL before continuing.
-- If Login fails, stop and check the current account credentials privately. Do not reset the existing database password just for the recording.
-- If a protected-route test returns 200, clear the `hr_session` cookie and retry; do not claim it returned 401 unless it did.
-- If an Employee CRUD request fails, state which step failed and show the actual result. Do not present an unverified response as successful.
-- If the leave-list request is empty or unavailable, explain the workflow and distinguish that explanation from a tested operation.
+**Say**
+
+> To summarize, the system combines employee and onboarding management with leave requests, balances, and approvals. This demo showed API availability, authentication, protected access, and employee CRUD. One future improvement is accounting for public holidays when calculating leave duration. Thank you.
+
+## If something goes wrong
+
+- **Health fails:** check that XAMPP MySQL is running and inspect the backend terminal.
+- **Login returns 401:** verify the current account password privately; do not reset the live database password for the demo.
+- **Protected route returns 200:** clear the `hr_session` cookie for `localhost` and retry; the cookie is authentication even if the request has no Bearer token.
+- **Employee CRUD fails:** do not claim the failed step passed. State the actual response and stop or retry after fixing the cause.
+- **Leave request list is empty or errors:** explain the workflow and distinguish that explanation from a tested operation.
+- **A secret or personal record appears:** stop recording and redo that segment with the sensitive area hidden.
