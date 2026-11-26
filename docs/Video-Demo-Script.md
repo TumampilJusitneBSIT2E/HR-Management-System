@@ -13,6 +13,43 @@ Target runtime: about 7 minutes 30 seconds. This is a narrated system walkthroug
 - If repeating CRUD after a practice run, run Create again to get a new employee ID, then use that same ID for Read, Update, and Deactivate.
 - The missing-token check must have no `hr_session` cookie. Clear the cookie for `localhost` immediately before this check; do not send Login again before the check.
 
+## Click-by-click recording setup
+
+### Start and check the system
+
+1. Open XAMPP Control Panel and click **Start** beside **MySQL**. Start **Apache** only if you plan to show phpMyAdmin.
+2. In VS Code, choose **Terminal → New Terminal**.
+3. Run `cd D:\xampp\htdocs\HR\backend`, then `npm.cmd run start:dev`.
+4. Wait until NestJS reports that the application has started. Leave this terminal open.
+5. The React site is optional for this API demonstration. If you want it on screen, open another terminal and run `cd D:\xampp\htdocs\HR\frontend`, then `npm.cmd run dev -- --host 0.0.0.0`.
+6. In Postman, expand **HR Management System API**, select **Health**, and click **Send**. Confirm `200 OK`. If it fails, do not start recording; check the backend terminal and MySQL.
+
+### Prepare Postman authentication
+
+1. In Postman's **Collections** pane, expand **HR Management System API**, then expand **Authentication**.
+2. For a live login, select **Login (JWT)** and click **Send** using your privately configured collection variables. Never show the Variables tab, password, login response body, or JWT on camera. Since login has already succeeded in the practice run, you can show the request name without sending it again.
+3. Select **Current Profile (Bearer JWT)** and click **Send**. Show only the `200 OK` status; avoid filming personal fields in the response.
+4. Immediately before the missing-auth test, click **Cookies** near the upper-right of the request. Choose `localhost`, remove the `hr_session` cookie, then close the cookie manager.
+5. Expand **Authentication checks**, select **Protected route without token (expect 401)**, and click **Send**. Confirm `401 Unauthorized` and a passing test result. Do not send Login between clearing the cookie and this check, because Login creates the cookie again.
+6. The no-token request disables Bearer auth; clearing the cookie removes the other authentication method. The remaining requests can still use the collection's saved Bearer token.
+
+### Run the Employee CRUD sequence
+
+1. In the collection pane, expand **Employee CRUD (HR Manager)**.
+2. Select **Create Employee**. Keep the request-body area out of the recording or blur it during editing: it contains an initial demo password.
+3. Click **Send**. Confirm success; the collection test saves the new employee ID.
+4. Select **Read Employee**, click **Send**, and confirm it returns the same saved ID.
+5. Select **Update Employee**, click **Send**, and confirm the position changes to `Updated Demo Analyst`.
+6. Select **Delete Employee (deactivate)**, click **Send**, and confirm success. Explain that this deactivates the account while preserving HR history.
+7. If repeating CRUD, run Create again first and then use that newly saved ID. If the timestamped email conflicts, wait briefly and retry Create with a new timestamp.
+
+### Arrange the screen and open code
+
+1. Maximize Postman and collapse unrelated collections. Keep the request name, URL, status, and safe response portion readable.
+2. Enlarge the response panel if needed. Avoid showing passwords, JWTs, the collection Variables tab, `.env`, the Create request body, or real employee details.
+3. In VS Code, use **Ctrl+P**, enter the filename, then press **Enter** to open a file. Use **Ctrl+F** within it to find a method or entity named in the recording steps below.
+4. Do a practice run first. During recording, wait for each Postman response before selecting the next request.
+
 ## Recording script
 
 ### 0:00–0:40 — Introduction
@@ -25,7 +62,7 @@ Target runtime: about 7 minutes 30 seconds. This is a narrated system walkthroug
 
 ### 0:40–1:25 — Architecture and code structure
 
-**Show:** In VS Code, briefly show `frontend/src/App.jsx`, then `backend/src/hr/hr.controller.ts`, and `backend/src/database/entities.ts`. Do not scroll through the whole files; highlight the file names and a relevant method or entity.
+**Show/click:** In VS Code, press **Ctrl+P**, type `frontend/src/App.jsx`, and press **Enter**. Briefly show the React source. Repeat with `backend/src/hr/hr.controller.ts`, then `backend/src/database/entities.ts`. Show only the filename and relevant area.
 
 **Say:**
 
@@ -33,7 +70,7 @@ Target runtime: about 7 minutes 30 seconds. This is a narrated system walkthroug
 
 ### 1:25–1:55 — API health
 
-**Show:** In Postman, select **Health**, click **Send**, and show the `200 OK` status and `{ "status": "ok" }` response.
+**Show/click:** In Postman's left **Collections** pane, expand **HR Management System API** if needed, select **Health**, then click **Send**. Show `200 OK` and `{ "status": "ok" }`.
 
 **Say:**
 
@@ -41,7 +78,7 @@ Target runtime: about 7 minutes 30 seconds. This is a narrated system walkthroug
 
 ### 1:55–3:05 — Authentication and access control
 
-**Show:** Briefly show the request names **Login (JWT)** and **Current Profile (Bearer JWT)**. Keep the login body, response token, and any password fields hidden. Show the profile's `200 OK` status without exposing personal fields. Then show **Protected route without token (expect 401)** and its `401 Unauthorized` status.
+**Show/click:** Expand **Authentication**. Briefly show **Login (JWT)** without exposing its body or response. Select **Current Profile (Bearer JWT)** and show `200 OK` without personal fields. Click **Cookies**, choose `localhost`, remove `hr_session`, and close the cookie manager. Expand **Authentication checks**, select **Protected route without token (expect 401)**, click **Send**, and show `401 Unauthorized` with the test passing.
 
 **Say:**
 
@@ -51,7 +88,7 @@ Target runtime: about 7 minutes 30 seconds. This is a narrated system walkthroug
 
 ### 3:05–5:20 — Employee CRUD
 
-**Show:** Expand **Employee CRUD (HR Manager)**. Send each request in order, showing the status code and a safe part of the response:
+**Show/click:** Expand **Employee CRUD (HR Manager)** in the left pane. Select and send each request in order, showing the status code and a safe part of the response:
 
 1. **Create Employee**
 2. **Read Employee**
@@ -68,7 +105,7 @@ Wait for each response before moving to the next request. If one fails, do not c
 
 ### 5:20–6:20 — Leave management and onboarding
 
-**Show:** Expand **Leave Request CRUD** and send **List My Leave Requests** only if it returns a successful response for the signed-in user. If it does not, show the route names in the documentation or the leave request/approval entities in `backend/src/database/entities.ts`. Do not create a request with the HR Manager account.
+**Show/click:** Expand **Leave Request CRUD** and select **List My Leave Requests**. Click **Send** only if the saved Bearer token belongs to a user allowed to view the result; otherwise, skip the request. If unavailable or unsuccessful, use **Ctrl+P** to open `backend/src/database/entities.ts` and **Ctrl+F** to find `LeaveRequestEntity` and `LeaveApprovalEntity`. Do not create a request with the HR Manager account.
 
 **Say:**
 
@@ -76,7 +113,7 @@ Wait for each response before moving to the next request. If one fails, do not c
 
 ### 6:20–7:05 — Brief code/data-flow trace
 
-**Show:** In VS Code, show `backend/src/hr/hr.controller.ts` at `createEmployee` and `backend/src/hr/hr.service.ts` at `createEmployee`. If time permits, point to the employee/department relationship in `backend/src/database/entities.ts`.
+**Show/click:** In VS Code, press **Ctrl+P**, open `backend/src/hr/hr.controller.ts`, then press **Ctrl+F** and search `createEmployee`. Show the controller method. Repeat with `backend/src/hr/hr.service.ts` and search `async createEmployee`. If time permits, open `backend/src/database/entities.ts`, search `class EmployeeEntity`, and show its department relationship.
 
 **Say:**
 
