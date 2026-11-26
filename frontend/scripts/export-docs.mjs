@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { marked } from 'marked';
@@ -27,6 +27,7 @@ const html = `<!doctype html>
     blockquote { border-left: 3px solid #4b83ad; margin: 10pt 0; padding: 4pt 12pt; }
     a { color: #205b88; text-decoration: none; }
     img { max-width: 100%; }
+    figure { break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -35,5 +36,9 @@ ${marked.parse(markdown, { gfm: true, breaks: false })}
 </html>`;
 const outputDirectory = resolve(projectRoot, 'frontend', 'public');
 await mkdir(outputDirectory, { recursive: true });
+await copyFile(
+  resolve(projectRoot, 'docs', 'hr-system-erd.svg'),
+  resolve(outputDirectory, 'hr-system-erd.svg'),
+);
 await writeFile(resolve(outputDirectory, 'technical-documentation.html'), html, 'utf8');
-console.log('Generated frontend/public/technical-documentation.html');
+console.log('Generated frontend/public/technical-documentation.html and ERD image');

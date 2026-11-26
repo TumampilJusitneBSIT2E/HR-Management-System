@@ -19,12 +19,23 @@
     blockquote { border-left: 3px solid #4b83ad; margin: 10pt 0; padding: 4pt 12pt; }
     a { color: #205b88; text-decoration: none; }
     img { max-width: 100%; }
+    figure { break-inside: avoid; }
   </style>
 </head>
 <body>
-<h1>HR Management System</h1>
+<h1>Employee Onboarding and Leave Management System</h1>
+<blockquote>
+<p>Submission draft: complete the cover fields and add genuine evidence and the shareable video link before final submission.</p>
+</blockquote>
 <h2>Cover Page</h2>
-<p><strong>Course:</strong> ITEC 116 — IT Elective 4 (Systems Integration and Architecture 2)<br><strong>Project type:</strong> Individual final project<br><strong>Student:</strong> Justine Tumampil<br><strong>GitHub repository:</strong> <a href="https://github.com/TumampilJusitneBSIT2E/HR-Management-System">HR-Management-System</a><br><strong>Video walkthrough:</strong> Add the shareable 5–10 minute video URL before exporting this document<br><strong>Presentation date:</strong> November 28, 2026</p>
+<p><strong>Course:</strong> ITEC 116 — IT Elective 4 (Systems Integration and Architecture 2)<br>
+<strong>Project type:</strong> Individual final project<br>
+<strong>Student:</strong> Justine Tumampil<br>
+<strong>Section:</strong> Add/confirm section<br>
+<strong>Instructor:</strong> Add instructor name<br>
+<strong>GitHub repository:</strong> <a href="https://github.com/TumampilJusitneBSIT2E/HR-Management-System">HR-Management-System</a><br>
+<strong>Video walkthrough:</strong> Add the shareable 5–10 minute video URL before final submission<br>
+<strong>Presentation date:</strong> November 28, 2026</p>
 <h2>Table of Contents</h2>
 <ol>
 <li>Project Overview</li>
@@ -75,6 +86,12 @@
 <p>Manual HR processes make it difficult to track leave balances, prevent overlapping requests, assign approvals, and verify onboarding documents consistently.</p>
 <h3>Scope</h3>
 <p>The prototype manages employees and departments, leave types and balances, leave requests and approval records, onboarding documents, and audit events. It uses weekday-based leave duration; public holidays are not excluded.</p>
+<h3>Project constraints</h3>
+<ul>
+<li>The API uses <code>/hr/...</code> and <code>/auth/...</code> routes rather than a <code>/api/v1</code> prefix.</li>
+<li>Document uploads are stored in a private local upload directory configured by <code>UPLOAD_DIR</code>; the application does not integrate with Google Drive. Older <code>drive://</code> seed values are demonstration metadata only, not working cloud files.</li>
+<li>The system is designed as a local coursework demonstration using XAMPP/MySQL. It does not include production hosting, cloud storage credentials, or public-holiday calendars.</li>
+</ul>
 <h3>Functional requirements</h3>
 <ul>
 <li>Authenticate users and protect HR routes.</li>
@@ -104,19 +121,11 @@ NestJS guards -&gt; DTO validation -&gt; Controller
                                MySQL
 </code></pre>
 <p>Employee and leave-request CRUD, authentication, and HR resource access use TypeORM entities and repositories. Database initialization and a few aggregate/reservation queries use parameterized SQL through TypeORM&#39;s <code>DataSource</code>. Uploaded document bytes are stored in the private upload directory; the database stores metadata and a storage key.</p>
+<p>The route prefixes are <code>/hr</code> and <code>/auth</code>; there is no <code>/api/v1</code> prefix in this implementation. File uploads use a private local directory rather than Google Drive. These choices keep the coursework demo self-contained and avoid requiring cloud credentials or an external upload service; they are implementation differences from earlier lab design ideas, not features that should be described as implemented.</p>
 <h2>4. Database Design</h2>
 <h3>ERD relationships</h3>
-<pre><code class="language-mermaid">erDiagram
-  DEPARTMENTS ||--o{ EMPLOYEES : contains
-  EMPLOYEES ||--o{ LEAVE_BALANCES : receives
-  LEAVE_TYPES ||--o{ LEAVE_BALANCES : defines
-  EMPLOYEES ||--o{ LEAVE_REQUESTS : submits
-  LEAVE_TYPES ||--o{ LEAVE_REQUESTS : classifies
-  LEAVE_REQUESTS ||--o{ LEAVE_APPROVALS : requires
-  EMPLOYEES ||--o{ LEAVE_APPROVALS : approves
-  EMPLOYEES ||--o{ ONBOARDING_DOCUMENTS : uploads
-  EMPLOYEES ||--o{ AUDIT_LOGS : acts
-</code></pre>
+<p>The diagram labels primary keys (PK), foreign keys (FK), and the main one-to-many relationships. Department heads and approval actors are employees; document verifiers are optional employees.</p>
+<p><img src="hr-system-erd.svg" alt="HR System entity relationship diagram with PK and FK fields"></p>
 <h3>Main entities</h3>
 <table>
 <thead>
@@ -169,7 +178,8 @@ NestJS guards -&gt; DTO validation -&gt; Controller
 </tbody></table>
 <p>The TypeORM mappings are in <code>backend/src/database/entities.ts</code>. The reproducible DDL is in <code>docs/hr_system.sql</code>; backend startup creates missing tables and inserts demonstration records.</p>
 <h2>5. REST API Design</h2>
-<p>Base URL: <code>http://localhost:3001</code>. Protected endpoints accept an <code>Authorization: Bearer &lt;JWT&gt;</code> header or the browser&#39;s HttpOnly session cookie. State-changing requests from Postman must include an allowed <code>Origin</code> header, normally <code>http://localhost:5173</code>.</p>
+<p>Base URL: <code>http://localhost:3001</code>. The system exposes 27 route handlers: 1 root route, 4 authentication routes, and 22 HR routes (including health). Protected endpoints accept an <code>Authorization: Bearer &lt;JWT&gt;</code> header or the browser&#39;s HttpOnly session cookie. State-changing requests from Postman must include an allowed <code>Origin</code> header, normally <code>http://localhost:5173</code>.</p>
+<p>The method breakdown is 13 GET, 7 POST, 4 PATCH, 1 PUT, and 2 DELETE routes.</p>
 <table>
 <thead>
 <tr>
@@ -177,6 +187,7 @@ NestJS guards -&gt; DTO validation -&gt; Controller
 <th>Endpoint</th>
 <th>Access</th>
 <th>Purpose</th>
+<th>Success / common error responses</th>
 </tr>
 </thead>
 <tbody><tr>
@@ -184,164 +195,192 @@ NestJS guards -&gt; DTO validation -&gt; Controller
 <td><code>/</code></td>
 <td>Public</td>
 <td>API greeting</td>
+<td>200; 500</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/health</code></td>
 <td>Public</td>
 <td>Health status</td>
+<td>200; 500</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/auth/login</code></td>
 <td>Public</td>
 <td>Authenticate; returns JWT and sets session cookie</td>
+<td>201; 400, 401, 429</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/auth/me</code></td>
 <td>Signed in</td>
 <td>Read current profile</td>
+<td>200; 401</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/auth/change-password</code></td>
 <td>Signed in</td>
 <td>Change password and rotate JWT</td>
+<td>201; 400, 401, 409</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/auth/logout</code></td>
 <td>Public</td>
 <td>Clear browser session cookie</td>
+<td>201; 403 (invalid Origin)</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/employees</code></td>
 <td>HR Manager</td>
 <td>List employees</td>
+<td>200; 401, 403</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/employees/:employeeId</code></td>
 <td>HR Manager</td>
 <td>Read employee</td>
+<td>200; 401, 403, 404</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/hr/employees</code></td>
 <td>HR Manager</td>
 <td>Create employee and initial balances</td>
+<td>201; 400, 401, 403, 404, 409</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/hr/employees/:employeeId</code></td>
 <td>HR Manager</td>
 <td>Update employee fields</td>
+<td>200; 400, 401, 403, 404, 409</td>
 </tr>
 <tr>
 <td>DELETE</td>
 <td><code>/hr/employees/:employeeId</code></td>
 <td>HR Manager</td>
 <td>Deactivate employee while retaining HR history</td>
+<td>200; 401, 403, 404, 409</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/hr/employees/:employeeId/deactivate</code></td>
 <td>HR Manager</td>
 <td>Legacy deactivate action</td>
+<td>200; 401, 403, 404, 409</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/hr/employees/:employeeId/password-reset</code></td>
 <td>HR Manager</td>
 <td>Issue a temporary password</td>
+<td>201; 401, 403, 404</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/departments</code></td>
 <td>Signed in</td>
 <td>List departments</td>
+<td>200; 401</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/leave-types</code></td>
 <td>Signed in</td>
 <td>List leave types</td>
+<td>200; 401</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/leave-balances</code></td>
 <td>Signed in; HR sees all</td>
 <td>Read annual balances and pending reservations</td>
+<td>200; 401</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/leave-requests</code></td>
 <td>Signed in</td>
 <td>List requests within the user&#39;s access scope</td>
+<td>200; 401</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/leave-requests/:requestId</code></td>
 <td>Signed in</td>
 <td>Read an accessible request</td>
+<td>200; 401, 404</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/hr/leave-requests</code></td>
 <td>Signed in</td>
 <td>Submit a leave request</td>
+<td>201; 400, 401, 404, 409</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/hr/leave-requests/:requestId</code></td>
 <td>Owner</td>
 <td>Update a pending request</td>
+<td>200; 400, 401, 404, 409</td>
 </tr>
 <tr>
 <td>DELETE</td>
 <td><code>/hr/leave-requests/:requestId</code></td>
 <td>Owner</td>
 <td>Delete a pending request and its pending approval records</td>
+<td>200; 401, 404, 409</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/approvals</code></td>
 <td>Signed in</td>
 <td>List approvals assigned to or submitted by the user</td>
+<td>200; 401</td>
 </tr>
 <tr>
 <td>PUT</td>
 <td><code>/hr/approvals/:approvalId</code></td>
 <td>Department Head / HR Manager</td>
 <td>Approve or reject an assigned approval</td>
+<td>200; 400, 401, 403, 404, 409</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/documents</code></td>
 <td>Signed in</td>
 <td>List documents in the user&#39;s access scope</td>
+<td>200; 401</td>
 </tr>
 <tr>
 <td>POST</td>
 <td><code>/hr/documents</code></td>
 <td>Signed in</td>
 <td>Upload a PDF, JPEG, or PNG</td>
+<td>201; 400, 401, 413</td>
 </tr>
 <tr>
 <td>GET</td>
 <td><code>/hr/documents/:documentId/download</code></td>
 <td>Owner / authorized reviewer / HR</td>
 <td>Download a private upload</td>
+<td>200; 401, 404</td>
 </tr>
 <tr>
 <td>PATCH</td>
 <td><code>/hr/documents/:documentId/verification</code></td>
 <td>HR Manager</td>
 <td>Verify or reject a pending document</td>
+<td>200; 400, 401, 403, 404</td>
 </tr>
 </tbody></table>
+<p>These are expected success codes from NestJS defaults and common errors based on guards, validation, and service checks; they are not a claim that every route/error combination has been individually exercised. <code>POST</code> handlers default to <code>201</code>; other methods default to <code>200</code>. The <code>Origin</code> guard can reject state-changing requests whose Origin is not allowed.</p>
 <p>The employee and leave-request resources have full CRUD operations. <code>DELETE</code> on an employee intentionally deactivates the account rather than erasing records referenced by HR history. Leave-request deletion is limited to the submitting employee and pending requests.</p>
 <h3>Example request and response</h3>
 <p><strong>Create employee</strong></p>
@@ -361,6 +400,84 @@ Content-Type: application/json
 }
 </code></pre>
 <p>Successful creation returns <code>201 Created</code> with the employee&#39;s public fields; it never returns the password hash. Validation errors return <code>400</code>; unauthenticated requests return <code>401</code>; role failures return <code>403</code>; missing records return <code>404</code>; conflicting operations return <code>409</code>.</p>
+<p>Illustrative successful response (<code>201 Created</code>):</p>
+<pre><code class="language-json">{
+  &quot;EmployeeID&quot;: 42,
+  &quot;DepartmentID&quot;: 2,
+  &quot;FirstName&quot;: &quot;Demo&quot;,
+  &quot;LastName&quot;: &quot;Employee&quot;,
+  &quot;Email&quot;: &quot;demo.employee@example.test&quot;,
+  &quot;Role&quot;: &quot;Employee&quot;,
+  &quot;Position&quot;: &quot;Analyst&quot;,
+  &quot;DateHired&quot;: &quot;2026-11-26&quot;,
+  &quot;EmploymentStatus&quot;: &quot;Active&quot;
+}
+</code></pre>
+<h3>Additional request and response examples</h3>
+<p>The following are sanitized, illustrative examples based on the DTOs and response mappings. They are documentation examples, not captured Postman evidence. Never publish a live password or JWT; redact tokens in screenshots.</p>
+<p><strong>Login</strong></p>
+<pre><code class="language-http">POST /auth/login
+Origin: http://localhost:5173
+Content-Type: application/json
+</code></pre>
+<pre><code class="language-json">{
+  &quot;email&quot;: &quot;demo.employee@example.test&quot;,
+  &quot;password&quot;: &quot;&lt;PRIVATE_PASSWORD&gt;&quot;
+}
+</code></pre>
+<p>Successful response (<code>201 Created</code>; token intentionally redacted):</p>
+<pre><code class="language-json">{
+  &quot;accessToken&quot;: &quot;&lt;JWT_REDACTED&gt;&quot;,
+  &quot;user&quot;: {
+    &quot;EmployeeID&quot;: 42,
+    &quot;DepartmentID&quot;: 2,
+    &quot;FirstName&quot;: &quot;Demo&quot;,
+    &quot;LastName&quot;: &quot;Employee&quot;,
+    &quot;Email&quot;: &quot;demo.employee@example.test&quot;,
+    &quot;Role&quot;: &quot;Employee&quot;,
+    &quot;Position&quot;: &quot;Analyst&quot;,
+    &quot;DateHired&quot;: &quot;2026-11-26&quot;,
+    &quot;EmploymentStatus&quot;: &quot;Active&quot;,
+    &quot;MustChangePassword&quot;: false
+  }
+}
+</code></pre>
+<p><strong>Create leave request</strong></p>
+<pre><code class="language-http">POST /hr/leave-requests
+Authorization: Bearer &lt;JWT&gt;
+Origin: http://localhost:5173
+Content-Type: application/json
+</code></pre>
+<pre><code class="language-json">{
+  &quot;LeaveTypeID&quot;: 1,
+  &quot;StartDate&quot;: &quot;2026-12-01&quot;,
+  &quot;EndDate&quot;: &quot;2026-12-02&quot;,
+  &quot;Reason&quot;: &quot;Example personal leave&quot;
+}
+</code></pre>
+<p>Illustrative successful response (<code>201 Created</code>):</p>
+<pre><code class="language-json">{
+  &quot;LeaveRequestID&quot;: 101,
+  &quot;EmployeeID&quot;: 42,
+  &quot;LeaveTypeID&quot;: 1,
+  &quot;StartDate&quot;: &quot;2026-12-01&quot;,
+  &quot;EndDate&quot;: &quot;2026-12-02&quot;,
+  &quot;TotalDays&quot;: 2,
+  &quot;Reason&quot;: &quot;Example personal leave&quot;,
+  &quot;DocumentURL&quot;: null,
+  &quot;Status&quot;: &quot;Pending&quot;,
+  &quot;DateSubmitted&quot;: &quot;2026-11-26&quot;
+}
+</code></pre>
+<p><strong>Unauthenticated request</strong></p>
+<pre><code class="language-http">GET /hr/employees
+</code></pre>
+<p>Illustrative response when no valid Bearer token or session cookie is supplied (<code>401 Unauthorized</code>):</p>
+<pre><code class="language-json">{
+  &quot;statusCode&quot;: 401,
+  &quot;message&quot;: &quot;Unauthorized&quot;
+}
+</code></pre>
 <h2>6. Authentication and Security</h2>
 <ul>
 <li>Passwords are hashed with bcrypt; the database stores hashes, not plaintext passwords.</li>
@@ -378,6 +495,51 @@ Content-Type: application/json
 <h2>7. Backend Implementation</h2>
 <p>The backend uses NestJS modules, controllers, services, DTOs, guards, TypeORM entities, and repositories. The main TypeORM entity mappings are in <code>backend/src/database/entities.ts</code>; the HR API is in <code>backend/src/hr/hr.controller.ts</code> and <code>backend/src/hr/hr.service.ts</code>; authentication is in <code>backend/src/auth</code>.</p>
 <p>The HR application supports employee management, leave balances and approvals, and private onboarding document workflows. The React frontend is an optional presentation layer; the API can be demonstrated independently with Postman.</p>
+<h3>Project structure</h3>
+<pre><code class="language-text">HR/
+├── backend/
+│   ├── src/auth/       # Login, JWT strategy, guards, DTOs
+│   ├── src/database/   # TypeORM entities and MySQL initialization
+│   └── src/hr/         # HR controllers, services, and DTOs
+├── frontend/
+│   ├── src/            # React application
+│   └── scripts/        # Documentation HTML exporter
+├── docs/               # Technical docs, ERD, SQL schema, video guide
+└── postman/            # API collection
+</code></pre>
+<h3>Request flow example</h3>
+<p>The controller receives the validated DTO and current user identity, then delegates the operation to the service:</p>
+<pre><code class="language-typescript">@Post(&#39;employees&#39;)
+@Roles(&#39;HRManager&#39;)
+createEmployee(@Body() dto: CreateEmployeeDto, @Req() request: AuthenticatedRequest) {
+  return this.hrService.createEmployee(dto, request.user.EmployeeID);
+}
+</code></pre>
+<p>The service hashes the initial password, opens a transaction, and persists the employee through a TypeORM repository:</p>
+<pre><code class="language-typescript">const passwordHash = await hash(dto.InitialPassword, 10);
+return this.employeeRepository.manager.transaction(async (manager) =&gt; {
+  const employees = manager.getRepository(EmployeeEntity);
+  const employee = await employees.save(employees.create({
+    departmentId: dto.DepartmentID,
+    email: dto.Email.trim().toLowerCase(),
+    passwordHash,
+    role: dto.Role,
+    position: dto.Position.trim(),
+    // Other validated employee fields are mapped here.
+  }));
+  return this.toEmployee(employee);
+});
+</code></pre>
+<p>The actual implementation also checks the department and duplicate email, creates initial leave balances, and writes an audit entry within the transaction.</p>
+<h3>Local setup</h3>
+<ol>
+<li>Start MySQL in XAMPP and create the <code>hr_system</code> database if it does not exist. Apache is optional unless using phpMyAdmin.</li>
+<li>Copy <code>backend/.env.example</code> to <code>backend/.env</code> and set local connection values and a private JWT secret. Do not commit <code>.env</code>.</li>
+<li>In PowerShell, run <code>cd D:\xampp\htdocs\HR\backend</code>, then <code>npm.cmd install</code> if dependencies are not installed.</li>
+<li>Start the API with <code>npm.cmd run start:dev</code>; it listens on port <code>3001</code>.</li>
+<li>To run the UI in a second terminal, run <code>cd D:\xampp\htdocs\HR\frontend</code>, then <code>npm.cmd install</code> if needed and <code>npm.cmd run dev -- --host 0.0.0.0</code>. Vite listens on port <code>5173</code>.</li>
+</ol>
+<p>The backend reads configuration from environment variables: <code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code>, <code>DB_NAME</code>, <code>JWT_SECRET</code>, <code>DEMO_HR_PASSWORD</code>, <code>DEMO_EMPLOYEE_PASSWORD</code>, <code>DEMO_DEPARTMENT_HEAD_PASSWORD</code>, <code>FRONTEND_ORIGINS</code>, <code>API_ORIGIN</code>, and <code>UPLOAD_DIR</code>. This document intentionally does not include their private values.</p>
 <h2>8. API Testing and Validation</h2>
 <p>Import <code>postman/HR-System.postman_collection.json</code> into Postman. Set <code>hrPassword</code>; if the seeded account requires a first-login change, set <code>newPassword</code> and run the change-password request. The collection includes:</p>
 <ul>
@@ -388,16 +550,31 @@ Content-Type: application/json
 <li>Employee Create, Read, Update, and Delete/deactivate sequence.</li>
 <li>Leave-request examples for an Employee account.</li>
 </ul>
-<p>The current local validation record:</p>
+<p>The collection has representative requests, not one request for every route. The endpoint inventory documents the implemented API; do not describe all routes as individually tested unless they have actually been run.</p>
+<p>The recorded local validation completed on November 25, 2026:</p>
 <ul>
 <li>Backend TypeScript/Nest build: passed.</li>
 <li>Frontend production build: passed.</li>
 <li>XAMPP/MySQL connection and API health route: verified after startup.</li>
+<li>Postman login: returned <code>201 Created</code>.</li>
+<li>Current profile: returned <code>200 OK</code>.</li>
 <li>Protected employees route without a token: returned <code>401</code>.</li>
-<li>Capture and insert representative Postman screenshots here before final PDF export.</li>
+<li>Employee Create, Read, Update, and Deactivate requests: completed successfully in Postman.</li>
+<li>A successful authenticated leave-request submission and document upload were not recorded as tested.</li>
 </ul>
+<h3>Evidence to add before final PDF submission</h3>
+<p>Insert genuine, sanitized screenshots in this section after recording them. Do not use the illustrative JSON examples above as screenshots or expose an actual JWT.</p>
+<ol>
+<li><strong>Login evidence:</strong> show request name and successful status; redact the token and hide passwords.</li>
+<li><strong>Employee CRUD evidence:</strong> show successful Create, Read, Update, and Deactivate statuses. Use a throwaway demo employee and hide its initial password.</li>
+<li><strong>Authentication evidence:</strong> show the missing-auth request returning <code>401</code> with the passing test visible.</li>
+<li><strong>Database evidence:</strong> show a phpMyAdmin row for the same demo employee after deactivation, with unrelated employee details hidden.</li>
+<li><strong>Leave evidence (optional if not tested):</strong> include only if an Employee-account leave request is successfully submitted; otherwise leave it out and do not claim it was tested.</li>
+</ol>
+<p>The live database export, if required by the course, must be exported separately from phpMyAdmin after the demo. <code>docs/hr_system.sql</code> is reproducible DDL plus sanitized demonstration data, not a dump of the current live database.</p>
 <h2>9. Conclusion</h2>
 <p>The prototype integrates a MySQL-backed HR workflow, REST APIs, JWT authentication, role-based access, validation, and a React client. The design prioritizes leave policy checks, controlled approval, and protected employee documents. Future work includes broader automated endpoint tests, a formal migration strategy, and public-holiday-aware leave calculation.</p>
+<p>One implementation challenge was keeping the browser&#39;s HttpOnly cookie session and Postman&#39;s Bearer-token flow compatible with the same guarded API. The project uses an explicit origin guard for state-changing requests and documents the required Origin header for Postman. A lesson from the work is to test authorization and representative CRUD paths as well as confirm that routes compile.</p>
 <h2>10. References</h2>
 <ul>
 <li>ITEC 116 Final Project Student Guide, provided in the course materials.</li>
@@ -406,14 +583,22 @@ Content-Type: application/json
 <li>MySQL documentation: <a href="https://dev.mysql.com/doc/">https://dev.mysql.com/doc/</a></li>
 <li>Postman Learning Center: <a href="https://learning.postman.com/">https://learning.postman.com/</a></li>
 </ul>
-<h2>11. Submission items still to complete</h2>
-<p>This local PDF is a documentation draft. Complete these items and export it again before submitting:</p>
-<ol>
-<li>Add the shareable video URL on the cover and make sure the course reviewer can access the private GitHub repository.</li>
-<li>Add screenshots of successful Postman tests and a phpMyAdmin record that matches the request.</li>
-<li>Confirm the ERD and endpoint examples match the final implementation.</li>
-<li>Export this document to PDF and open the exported file once to verify it.</li>
-</ol>
+<h2>11. Appendix</h2>
+<h3>Environment variable names</h3>
+<p>Configure these names in the ignored local <code>backend/.env</code> file. Values are intentionally omitted from this document and must never be included in screenshots or GitHub:</p>
+<p><code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code>, <code>DB_NAME</code>, <code>JWT_SECRET</code>, <code>DEMO_HR_PASSWORD</code>, <code>DEMO_EMPLOYEE_PASSWORD</code>, <code>DEMO_DEPARTMENT_HEAD_PASSWORD</code>, <code>FRONTEND_ORIGINS</code>, <code>API_ORIGIN</code>, <code>UPLOAD_DIR</code>.</p>
+<h3>Database deliverables</h3>
+<ul>
+<li><code>docs/hr_system.sql</code> — repeatable schema and sanitized demonstration dataset for coursework setup.</li>
+<li>A separate phpMyAdmin export — create this from the actual local database only if required by the course. Review it for private records and password hashes before submission.</li>
+</ul>
+<h3>Export checklist</h3>
+<ul>
+<li>Replace the cover-page section and instructor placeholders and add the shareable video URL.</li>
+<li>Add the genuine sanitized evidence listed in Section 8.</li>
+<li>Confirm the course reviewer can access the private GitHub repository.</li>
+<li>Regenerate the PDF from this Markdown source after the final edits. Disable print headers/footers so the browser URL and print date are not added.</li>
+</ul>
 
 </body>
 </html>

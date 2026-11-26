@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1050" viewBox="0 0 1500 1050" role="img" aria-labelledby="title description">
+  <title id="title">HR Management System entity relationship diagram</title>
+  <desc id="description">Eight MySQL entities and their foreign-key relationships for departments, employees, leave types, balances, requests, approvals, onboarding documents, and audit logs.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f9fc; }
+      .card { fill: #fff; stroke: #315a7d; stroke-width: 2; rx: 12; }
+      .head { fill: #173c5b; }
+      .headText { fill: #fff; font: 700 20px Arial, sans-serif; }
+      .field { fill: #172b3d; font: 16px Consolas, monospace; }
+      .note { fill: #476174; font: 14px Arial, sans-serif; }
+      .edge { fill: none; stroke: #5282a7; stroke-width: 2.5; }
+      .edgeLabel { fill: #285677; font: 700 14px Arial, sans-serif; paint-order: stroke; stroke: #f7f9fc; stroke-width: 6px; stroke-linejoin: round; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5282a7"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1500" height="1050"/>
+  <text x="50" y="40" fill="#173c5b" font-family="Arial, sans-serif" font-size="25" font-weight="700">HR Management System — entity relationships</text>
+  <text x="50" y="65" class="note">PK = primary key · FK = foreign key · one department/employee/type/request can relate to many child records</text>
+
+  <g class="edge">
+    <path d="M390 158 H570" marker-end="url(#arrow)"/>
+    <path d="M780 310 V420 H240 V465" marker-end="url(#arrow)"/>
+    <path d="M1110 178 H1050 V400 H300 V465" marker-end="url(#arrow)"/>
+    <path d="M790 310 V435" marker-end="url(#arrow)"/>
+    <path d="M1110 185 H1060 V375 H870 V435" marker-end="url(#arrow)"/>
+    <path d="M790 675 V805" marker-end="url(#arrow)"/>
+    <path d="M980 255 H1035 V735 H930 V805" marker-end="url(#arrow)"/>
+    <path d="M990 195 H1080 V520 H1105" marker-end="url(#arrow)"/>
+    <path d="M990 225 H1090 V565 H1105" marker-end="url(#arrow)"/>
+    <path d="M950 300 H1070 V895 H1105" marker-end="url(#arrow)"/>
+  </g>
+  <g class="edgeLabel">
+    <text x="425" y="146">department_id</text>
+    <text x="350" y="410">employee_id</text>
+    <text x="445" y="390">leave_type_id</text>
+    <text x="800" y="385">employee_id</text>
+    <text x="905" y="355">leave_type_id</text>
+    <text x="800" y="755">leave_request_id</text>
+    <text x="970" y="755">approver_id</text>
+    <text x="1015" y="495">employee_id</text>
+    <text x="1015" y="585">verified_by (optional)</text>
+    <text x="1015" y="875">actor_id</text>
+  </g>
+
+  <g transform="translate(50 90)">
+    <rect class="card" width="340" height="170"/>
+    <path class="head" d="M62 0 H278 Q340 0 340 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">departments</text>
+    <text class="field" x="18" y="78">PK department_id</text>
+    <text class="field" x="18" y="105">department_name (unique)</text>
+    <text class="field" x="18" y="132">department_head_id</text>
+    <text class="note" x="18" y="155">Head ID is not a declared FK</text>
+  </g>
+
+  <g transform="translate(570 70)">
+    <rect class="card" width="420" height="240"/>
+    <path class="head" d="M62 0 H358 Q420 0 420 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">employees</text>
+    <text class="field" x="18" y="78">PK employee_id</text>
+    <text class="field" x="18" y="105">FK department_id</text>
+    <text class="field" x="18" y="132">email (unique), password_hash</text>
+    <text class="field" x="18" y="159">role, position, status</text>
+    <text class="field" x="18" y="186">date_hired, token_version</text>
+    <text class="note" x="18" y="218">Referenced by HR and audit records</text>
+  </g>
+
+  <g transform="translate(1110 90)">
+    <rect class="card" width="340" height="170"/>
+    <path class="head" d="M62 0 H278 Q340 0 340 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">leave_types</text>
+    <text class="field" x="18" y="78">PK leave_type_id</text>
+    <text class="field" x="18" y="105">leave_type_name (unique)</text>
+    <text class="field" x="18" y="132">default_days</text>
+    <text class="field" x="18" y="155">requires_document</text>
+  </g>
+
+  <g transform="translate(50 465)">
+    <rect class="card" width="380" height="205"/>
+    <path class="head" d="M62 0 H318 Q380 0 380 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">leave_balances</text>
+    <text class="field" x="18" y="78">PK leave_balance_id</text>
+    <text class="field" x="18" y="105">FK employee_id</text>
+    <text class="field" x="18" y="132">FK leave_type_id</text>
+    <text class="field" x="18" y="159">balance_year, total_days</text>
+    <text class="field" x="18" y="186">used_days · unique employee/type/year</text>
+  </g>
+
+  <g transform="translate(580 435)">
+    <rect class="card" width="420" height="240"/>
+    <path class="head" d="M62 0 H358 Q420 0 420 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">leave_requests</text>
+    <text class="field" x="18" y="78">PK leave_request_id</text>
+    <text class="field" x="18" y="105">FK employee_id</text>
+    <text class="field" x="18" y="132">FK leave_type_id</text>
+    <text class="field" x="18" y="159">start_date, end_date, total_days</text>
+    <text class="field" x="18" y="186">reason, document_url, status</text>
+    <text class="field" x="18" y="213">date_submitted</text>
+  </g>
+
+  <g transform="translate(1110 430)">
+    <rect class="card" width="340" height="265"/>
+    <path class="head" d="M62 0 H278 Q340 0 340 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">onboarding_documents</text>
+    <text class="field" x="18" y="78">PK document_id</text>
+    <text class="field" x="18" y="105">FK employee_id</text>
+    <text class="field" x="18" y="132">FK verified_by (nullable)</text>
+    <text class="field" x="18" y="159">document_type, file_url</text>
+    <text class="field" x="18" y="186">verification_status</text>
+    <text class="field" x="18" y="213">file_storage_key, filename</text>
+    <text class="field" x="18" y="240">mime_type, file_size, dates</text>
+  </g>
+
+  <g transform="translate(580 805)">
+    <rect class="card" width="420" height="190"/>
+    <path class="head" d="M62 0 H358 Q420 0 420 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">leave_approvals</text>
+    <text class="field" x="18" y="78">PK approval_id</text>
+    <text class="field" x="18" y="105">FK leave_request_id</text>
+    <text class="field" x="18" y="132">FK approver_id → employees</text>
+    <text class="field" x="18" y="159">level, decision, remarks, date</text>
+    <text class="note" x="18" y="181">Unique request and approval level</text>
+  </g>
+
+  <g transform="translate(1110 820)">
+    <rect class="card" width="340" height="155"/>
+    <path class="head" d="M62 0 H278 Q340 0 340 12 V48 H0 V12 Q0 0 12 0 Z"/>
+    <text class="headText" x="18" y="32">audit_logs</text>
+    <text class="field" x="18" y="78">PK audit_id</text>
+    <text class="field" x="18" y="105">FK actor_id (nullable)</text>
+    <text class="field" x="18" y="132">action, resource, details, created_at</text>
+  </g>
+</svg>
